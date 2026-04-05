@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetroShop Market</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 15px; margin: 0; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .item-card { background: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #2a2a2a; }
+        .name { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; }
+        .price { color: #f1c40f; font-size: 1.3em; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 5px; }
+        .buy-btn { background: #f1c40f; color: #000; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1em; cursor: pointer; }
+        .buy-btn:active { transform: scale(0.98); opacity: 0.9; }
+        .badge { background: #c0392b; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2 style="margin:0; color:#f1c40f;">TIMIX METRO SHOP</h2>
+            <p style="font-size: 12px; color: #888;">Выберите товар и оплатите Звездами</p>
+        </div>
+
+        <div class="item-card">
+            <div class="name">Набор: MK14 + Броня 6 <span class="badge">TOP</span></div>
+            <div class="price">75 ⭐</div>
+            <button class="buy-btn" onclick="sendToBot('Набор: MK14 + Броня 6', 75)">КУПИТЬ</button>
+        </div>
+
+        <div class="item-card">
+            <div class="name">Взрывчатка (10 шт)</div>
+            <div class="price">30 ⭐</div>
+            <button class="buy-btn" onclick="sendToBot('Взрывчатка (10 шт)', 30)">КУПИТЬ</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function sendToBot(itemName, starsCount) {
+            tg.sendData(JSON.stringify({
+                item: itemName,
+                price: starsCount
+            }));
+        }
+    </script>
+</body>
+</html>
