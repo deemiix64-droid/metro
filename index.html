@@ -1,144 +1,58 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TIMIX METRO SHOP</title>
+    <title>METRO SHOP</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            background: #000; 
-            color: #fff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            padding: 15px; 
-            margin: 0; 
-        }
-        h2 { 
-            text-align: center; 
-            color: #f1c40f; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-        }
-        #catalog {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .card { 
-            background: #111; 
-            border: 1px solid #333; 
-            border-radius: 12px; 
-            padding: 15px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        .price-info { 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .item-name { 
-            font-weight: bold; 
-            font-size: 1.1em;
-            margin-bottom: 4px; 
-            display: block; 
-        }
-        .old-price { 
-            color: #ff4d4d; 
-            text-decoration: line-through; 
-            font-size: 0.85em; 
-            margin-bottom: 2px;
-        }
-        .current-price { 
-            color: #f1c40f; 
-            font-weight: bold; 
-            font-size: 1.2em; 
-        }
-        button { 
-            background: #f1c40f; 
-            color: #000; 
-            border: none; 
-            padding: 10px 20px; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        button:active {
-            transform: scale(0.95);
-        }
-        .error-msg {
-            text-align: center;
-            color: #ff4d4d;
-            margin-top: 20px;
-        }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
+        h2 { text-align: center; color: #f1c40f; }
+        .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .info { display: flex; flex-direction: column; }
+        .name { font-weight: bold; margin-bottom: 4px; }
+        .old { color: #ff4d4d; text-decoration: line-through; font-size: 0.8em; }
+        .price { color: #f1c40f; font-weight: bold; font-size: 1.2em; }
+        button { background: #f1c40f; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h2>МЕТРОШОП TIMIX</h2>
-    <div id="catalog">Загрузка товаров...</div>
+    <div id="catalog">Загрузка...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на весь экран
+        tg.expand();
 
-        // Данные вашей таблицы
         const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
-        fetch(URL)
-            .then(r => r.text())
-            .then(data => {
-                // Разбиваем на строки и убираем пустые
-                const rows = data.split('\n').filter(row => row.trim() !== '').slice(1);
-                let html = '';
-                
-                rows.forEach(row => {
-                    // Регулярное выражение для корректного разделения CSV с учетом кавычек
-                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    
-                    if (cols.length >= 2) {
-                        const name = cols[0].replace(/"/g, '').trim();
-                        const price = cols[1].replace(/"/g, '').trim();
-                        // Проверяем наличие акции в 3-й колонке (индекс 2)
-                        const sale = cols[2] ? cols[2].replace(/"/g, '').trim() : ""; 
-
-                        if (name && price) {
-                            html += `
-                            <div class="card">
-                                <div class="price-info">
-                                    <span class="item-name">${name}</span>
-                                    ${sale ? `<span class="old-price">${sale} ⭐</span>` : ''}
-                                    <span class="current-price">${price} ⭐</span>
-                                </div>
-                                <button onclick="buyItem('${name}', '${price}')">КУПИТЬ</button>
-                            </div>`;
-                        }
-                    }
-                });
-                
-                document.getElementById('catalog').innerHTML = html || '<div class="error-msg">Товары временно отсутствуют</div>';
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('catalog').innerHTML = '<div class="error-msg">Ошибка загрузки каталога. Проверьте доступ к таблице.</div>';
+        fetch(URL).then(r => r.text()).then(data => {
+            const rows = data.split('\n').filter(row => row.trim() !== '').slice(1);
+            let html = '';
+            rows.forEach(row => {
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (cols.length >= 2) {
+                    const n = cols[0].replace(/"/g, '').trim();
+                    const p = cols[1].replace(/"/g, '').trim();
+                    const s = cols[2] ? cols[2].replace(/"/g, '').trim() : ""; 
+                    html += `
+                    <div class="card">
+                        <div class="info">
+                            <span class="name">${n}</span>
+                            ${s ? `<span class="old">${s} ⭐</span>` : ''}
+                            <span class="price">${p} ⭐</span>
+                        </div>
+                        <button onclick="buy('${n}', '${p}')">КУПИТЬ</button>
+                    </div>`;
+                }
             });
+            document.getElementById('catalog').innerHTML = html;
+        });
 
-        // Функция покупки
-        function buyItem(name, price) {
-            const orderData = {
-                item: name,
-                price: price
-            };
-            
-            // 1. Отправляем данные боту (обязательно JSON строкой)
-            tg.sendData(JSON.stringify(orderData));
-            
-            // 2. Закрываем Mini App через небольшую паузу для надежности передачи
-            setTimeout(() => {
-                tg.close();
-            }, 150);
+        function buy(name, price) {
+            tg.sendData(JSON.stringify({item: name, price: price}));
+            setTimeout(() => { tg.close(); }, 150);
         }
     </script>
 </body>
