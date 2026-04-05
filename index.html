@@ -6,26 +6,21 @@
     <title>TIMIX METRO SHOP</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0f0f0f; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
-        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; letter-spacing: 2px; }
-        .catalog { display: grid; gap: 15px; margin-top: 20px; }
-        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
-        .card:active { transform: scale(0.98); border-color: #f1c40f; }
-        .info b { display: block; font-size: 1.1em; color: #eee; }
-        .price { color: #f1c40f; font-weight: bold; font-size: 1.2em; display: block; margin-top: 5px; }
-        button { background: #f1c40f; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .loading { text-align: center; color: #888; margin-top: 50px; }
+        body { background: #0f0f0f; color: #fff; font-family: sans-serif; padding: 20px; }
+        h2 { text-align: center; color: #f1c40f; }
+        .card { background: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .price { color: #f1c40f; font-weight: bold; }
+        button { background: #f1c40f; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h2>TIMIX METRO</h2>
-    <div id="catalog" class="catalog"><div class="loading">Загрузка товаров из таблицы...</div></div>
+    <div id="catalog">Загрузка...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
+        tg.expand();
 
-        // ТВОЙ ID ТАБЛИЦЫ (проверь его!)
         const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
@@ -42,23 +37,19 @@
                         if (name) {
                             html += `
                             <div class="card">
-                                <div class="info">
-                                    <b>${name}</b>
-                                    <span class="price">${price} ⭐</span>
-                                </div>
-                                <button onclick="buyItem('${name}', ${price})">КУПИТЬ</button>
+                                <div><b>${name}</b><br><span class="price">${price} ⭐</span></div>
+                                <button onclick="sendBuy('${name}', ${price})">КУПИТЬ</button>
                             </div>`;
                         }
                     }
                 });
-                document.getElementById('catalog').innerHTML = html || "Товаров пока нет в таблице";
-            })
-            .catch(() => {
-                document.getElementById('catalog').innerHTML = "Ошибка! Проверь публикацию таблицы.";
+                document.getElementById('catalog').innerHTML = html;
             });
 
-        function buyItem(name, price) {
+        function sendBuy(name, price) {
+            // ВАЖНО: sendData работает ТОЛЬКО если бот запущен через Reply Keyboard
             tg.sendData(JSON.stringify({item: name, price: price}));
+            tg.close(); // Закрываем магазин после нажатия
         }
     </script>
 </body>
