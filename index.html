@@ -7,18 +7,18 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
-        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; letter-spacing: 1px; }
+        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; }
         .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .price-info { display: flex; flex-direction: column; }
-        .old-price { color: #888; text-decoration: line-through; font-size: 0.85em; margin-bottom: 2px; }
+        .old-price { color: #ff4d4d; text-decoration: line-through; font-size: 0.85em; }
         .current-price { color: #f1c40f; font-weight: bold; font-size: 1.1em; }
         button { background: #f1c40f; color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; }
-        .item-name { font-weight: bold; margin-bottom: 4px; display: block; }
+        .item-name { font-weight: bold; margin-bottom: 4px; }
     </style>
 </head>
 <body>
     <h2>TIMIX METRO</h2>
-    <div id="catalog">Загрузка...</div>
+    <div id="catalog">Загрузка товаров...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -27,34 +27,46 @@
         const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
-        fetch(URL).then(r => r.text()).then(data => {
-            const rows = data.split('\n').slice(1);
-            let html = '';
-            rows.forEach(row => {
-                const cols = row.split(',');
-                if (cols.length >= 2) {
-                    const n = cols[0].replace(/"/g, '').trim();
-                    const p = cols[1].replace(/"/g, '').trim();
-                    const s = cols[2] ? cols[2].replace(/"/g, '').trim() : ""; 
+        fetch(URL)
+            .then(r => r.text())
+            .then(data => {
+                const rows = data.split('\n').filter(row => row.trim() !== '').slice(1);
+                let html = '';
+                
+                rows.forEach(row => {
+                    // Разделяем строку, учитывая возможные кавычки
+                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     
-                    if (n) {
-                        html += `<div class="card">
-                            <div class="price-info">
-                                <span class="item-name">${n}</span>
-                                ${s ? `<span class="old-price">${s} ⭐</span>` : ''}
-                                <span class="current-price">${p} ⭐</span>
-                            </div>
-                            <button onclick="buy('${n}', ${p})">КУПИТЬ</button>
-                        </div>`;
-                    }
-                }
-            });
-            document.getElementById('catalog').innerHTML = html;
-        });
+                    if (cols.length >= 2) {
+                        const n = cols[0].replace(/"/g, '').trim();
+                        const p = cols[1].replace(/"/g, '').trim();
+                        const s = cols[2] ? cols[2].replace(/"/g, '').trim() : ""; 
 
-        function buy(name, price) {
+                        if (n && p) {
+                            html += `
+                            <div class="card">
+                                <div class="price-info">
+                                    <span class="item-name">${n}</span>
+                                    ${s ? `<span class="old-price">${s} ⭐</span>` : ''}
+                                    <span class="current-price">${p} ⭐</span>
+                                </div>
+                                <button onclick="buyItem('${n}', '${p}')">КУПИТЬ</button>
+                            </div>`;
+                        }
+                    }
+                });
+                document.getElementById('catalog').innerHTML = html || "Товары не найдены";
+            })
+            .catch(err => {
+                document.getElementById('catalog').innerHTML = "Ошибка загрузки данных";
+                console.error(err);
+            });
+
+        function buyItem(name, price) {
+            // Отправляем данные ПЕРЕД закрытием
             tg.sendData(JSON.stringify({item: name, price: price}));
-            tg.close();
+            // Даем небольшую задержку перед закрытием для стабильности
+            setTimeout(() => { tg.close(); }, 100);
         }
     </script>
 </body>
