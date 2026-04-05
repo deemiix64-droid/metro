@@ -2,61 +2,62 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TIMIX METRO SHOP</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --accent: #f1c40f; --bg: #000; --card: #111; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 15px; }
-        .header { text-align: center; padding: 10px 0; border-bottom: 1px solid #333; margin-bottom: 20px; }
-        .card { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .price { color: var(--accent); font-weight: bold; font-size: 1.1em; }
-        button { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        button:active { transform: scale(0.95); }
-        #loader { text-align: center; color: #666; margin-top: 50px; }
+        body { background: #0f0f0f; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
+        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; letter-spacing: 2px; }
+        .catalog { display: grid; gap: 15px; margin-top: 20px; }
+        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .card:active { transform: scale(0.98); border-color: #f1c40f; }
+        .info b { display: block; font-size: 1.1em; color: #eee; }
+        .price { color: #f1c40f; font-weight: bold; font-size: 1.2em; display: block; margin-top: 5px; }
+        button { background: #f1c40f; color: #000; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .loading { text-align: center; color: #888; margin-top: 50px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2 style="margin:0; color:var(--accent);">TIMIX METRO SHOP</h2>
-        <p style="font-size:12px; color:#888;">Обновляется через Google Таблицы</p>
-    </div>
-
-    <div id="catalog"><div id="loader">Загрузка товаров...</div></div>
+    <h2>TIMIX METRO</h2>
+    <div id="catalog" class="catalog"><div class="loading">Загрузка товаров из таблицы...</div></div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        tg.expand(); // Развернуть на весь экран
 
-        // ВСТАВЬ СВОЙ ID ТАБЛИЦЫ ТУТ
-        const SHEET_ID = '1zOwvt8HtAuGvaKh-DYUk7d0g0S9S-6kt7rqX9gGFKc8'; 
-        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+        // ТВОЙ ID ТАБЛИЦЫ (проверь его!)
+        const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
+        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
         fetch(URL)
-            .then(res => res.text())
+            .then(r => r.text())
             .then(data => {
-                const json = JSON.parse(data.substr(47).slice(0, -2));
-                const rows = json.table.rows;
+                const rows = data.split('\n').slice(1);
                 let html = '';
-                
-                rows.forEach((row, i) => {
-                    if (i === 0) return; // Пропуск заголовка
-                    const name = row.c[0] ? row.c[0].v : "Без названия";
-                    const price = row.c[1] ? row.c[1].v : 0;
-                    html += `
-                        <div class="card">
-                            <div>
-                                <div style="font-weight:600">${name}</div>
-                                <div class="price">${price} ⭐</div>
-                            </div>
-                            <button onclick="buy('${name}', ${price})">КУПИТЬ</button>
-                        </div>`;
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    if (cols.length >= 2) {
+                        const name = cols[0].replace(/"/g, '').trim();
+                        const price = cols[1].replace(/"/g, '').trim();
+                        if (name) {
+                            html += `
+                            <div class="card">
+                                <div class="info">
+                                    <b>${name}</b>
+                                    <span class="price">${price} ⭐</span>
+                                </div>
+                                <button onclick="buyItem('${name}', ${price})">КУПИТЬ</button>
+                            </div>`;
+                        }
+                    }
                 });
-                document.getElementById('catalog').innerHTML = html || "Товаров нет";
+                document.getElementById('catalog').innerHTML = html || "Товаров пока нет в таблице";
             })
-            .catch(() => document.getElementById('catalog').innerHTML = "Ошибка связи с таблицей");
+            .catch(() => {
+                document.getElementById('catalog').innerHTML = "Ошибка! Проверь публикацию таблицы.";
+            });
 
-        function buy(name, price) {
+        function buyItem(name, price) {
             tg.sendData(JSON.stringify({item: name, price: price}));
         }
     </script>
