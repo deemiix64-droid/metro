@@ -3,48 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TIMIX SHOP</title>
+    <title>TIMIX METRO SHOP</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
-        h2 { text-align: center; color: #f1c40f; }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; padding-bottom: 80px; }
+        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; }
         .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .price { color: #f1c40f; font-weight: bold; }
-        button { background: #f1c40f; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
+        .price-info { display: flex; flex-direction: column; gap: 4px; }
+        .item-name { font-weight: bold; font-size: 1.1em; }
+        .current-price { color: #f1c40f; font-weight: bold; }
+        
+        .controls { display: flex; align-items: center; gap: 10px; }
+        .btn-qty { background: #333; color: #fff; border: none; width: 30px; height: 30px; border-radius: 5px; font-size: 1.2em; }
+        .count { font-weight: bold; min-width: 15px; text-align: center; }
+
+        #cart-btn { 
+            position: fixed; bottom: 20px; left: 15px; right: 15px; 
+            background: #f1c40f; color: #000; border: none; 
+            padding: 15px; border-radius: 10px; font-weight: bold; 
+            font-size: 1.1em; display: none; z-index: 100;
+        }
     </style>
 </head>
 <body>
     <h2>TIMIX METRO</h2>
     <div id="catalog">Загрузка...</div>
+    <button id="cart-btn" onclick="sendOrder()">ОФОРМИТЬ ЗАКАЗ</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
+        let cart = {}; 
         const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
         const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
         fetch(URL).then(r => r.text()).then(data => {
-            const rows = data.split('\n').slice(1);
+            const rows = data.split('\n').filter(r => r.trim() !== '').slice(1);
             let html = '';
-            rows.forEach(row => {
-                const cols = row.split(',');
+            rows.forEach((row, index) => {
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (cols.length >= 2) {
                     const n = cols[0].replace(/"/g, '').trim();
                     const p = cols[1].replace(/"/g, '').trim();
-                    if (n) {
-                        html += `<div class="card">
-                            <div><b>${n}</b><br><span class="price">${p} ⭐</span></div>
-                            <button onclick="buy('${n}', ${p})">КУПИТЬ</button>
-                        </div>`;
-                    }
+                    html += `
+                    <div class="card">
+                        <div class="price-info">
+                            <span class="item-name">${n}</span>
+                            <span class="current-price">${p} ⭐</span>
+                        </div>
+                        <div class="controls">
+                            <button class="btn-qty" onclick="changeQty('${n}', ${p}, -1)">-</button>
+                            <span class="count" id="count-${n}">0</span>
+                            <button class="btn-qty" onclick="changeQty('${n}', ${p}, 1)">+</button>
+                        </div>
+                    </div>`;
                 }
             });
             document.getElementById('catalog').innerHTML = html;
         });
 
-        function buy(name, price) {
-            tg.sendData(JSON.stringify({item: name, price: price}));
+        function changeQty(name, price, delta) {
+            if (!cart[name]) cart[name] = { price: price, qty: 0 };
+            cart[name].qty += delta;
+            if (cart[name].qty < 0) cart[name].qty = 0;
+            
+            document.getElementById(`count-${name}`).innerText = cart[name].qty;
+            updateCartBtn();
+        }
+
+        function updateCartBtn() {
+            let total = 0;
+            for (let id in cart) total += cart[id].price * cart[id].qty;
+            
+            const btn = document.getElementById('cart-btn');
+            if (total > 0) {
+                btn.style.display = 'block';
+                btn.innerText = `ОПЛАТИТЬ: ${total} ⭐`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function sendOrder() {
+            let finalItems = [];
+            let total = 0;
+            for (let name in cart) {
+                if (cart[name].qty > 0) {
+                    finalItems.push(`${name} (x${cart[name].qty})`);
+                    total += cart[name].price * cart[name].qty;
+                }
+            }
+            // ОТПРАВКА ДАННЫХ БОТУ
+            tg.sendData(JSON.stringify({
+                items: finalItems.join(", "),
+                total: total
+            }));
             tg.close();
         }
     </script>
