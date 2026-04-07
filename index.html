@@ -2,103 +2,96 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TIMIX METRO SHOP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegaMine App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; padding-bottom: 80px; }
-        h2 { text-align: center; color: #f1c40f; text-transform: uppercase; }
-        .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .price-info { display: flex; flex-direction: column; gap: 4px; }
-        .item-name { font-weight: bold; font-size: 1.1em; }
-        .current-price { color: #f1c40f; font-weight: bold; }
-        
-        .controls { display: flex; align-items: center; gap: 10px; }
-        .btn-qty { background: #333; color: #fff; border: none; width: 30px; height: 30px; border-radius: 5px; font-size: 1.2em; }
-        .count { font-weight: bold; min-width: 15px; text-align: center; }
-
-        #cart-btn { 
-            position: fixed; bottom: 20px; left: 15px; right: 15px; 
-            background: #f1c40f; color: #000; border: none; 
-            padding: 15px; border-radius: 10px; font-weight: bold; 
-            font-size: 1.1em; display: none; z-index: 100;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .section { display: none; }
+        .active { display: block; }
+        .nav { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; }
+        .nav button { background: #2c2c2c; border: 1px solid #444; color: white; padding: 10px 15px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+        .nav button:active { background: #3498db; }
+        .card { background: #1e1e1e; border: 1px solid #333; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        h2 { color: #3498db; margin-top: 0; }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #252525; color: white; box-sizing: border-box; }
+        .btn { background: #3498db; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-admin { background: #e74c3c; }
+        .hidden { display: none; }
+        hr { border: 0.5px solid #333; margin: 20px 0; }
     </style>
 </head>
 <body>
-    <h2>TIMIX METRO</h2>
-    <div id="catalog">Загрузка...</div>
-    <button id="cart-btn" onclick="sendOrder()">ОФОРМИТЬ ЗАКАЗ</button>
+    <div class="nav">
+        <button onclick="show('news')">📰 Новости</button>
+        <button onclick="show('profile')">👤 Профиль</button>
+        <button onclick="show('apply')">📝 Заявка</button>
+        <button id="admin-btn" class="hidden" onclick="show('admin')">🛠 Админ</button>
+    </div>
+
+    <div id="news" class="section active">
+        <h2>Новости MegaMine</h2>
+        <div class="card" id="news-text">Загрузка последних новостей...</div>
+    </div>
+
+    <div id="profile" class="section">
+        <h2>Мой профиль</h2>
+        <div class="card">
+            <p><b>Ник:</b> <span id="u-name">---</span></p>
+            <p><b>ID:</b> <span id="u-id">---</span></p>
+            <p><b>Статус:</b> Игрок MegaMine</p>
+        </div>
+    </div>
+
+    <div id="apply" class="section">
+        <h2>Подача заявки</h2>
+        <input type="text" id="nick" placeholder="Ваш игровой ник">
+        <textarea id="reason" rows="4" placeholder="Зачем вам на наш сервер?"></textarea>
+        <button class="btn" onclick="sendData('apply')">Отправить заявку</button>
+    </div>
+
+    <div id="admin" class="section">
+        <h2>Панель управления</h2>
+        <p>Изменить новости:</p>
+        <textarea id="adm-news" placeholder="Текст новой новости"></textarea>
+        <button class="btn btn-admin" onclick="sendData('edit_news')">Обновить новости</button>
+        <hr>
+        <p>Рассылка всем игрокам:</p>
+        <input type="text" id="adm-bc" placeholder="Текст сообщения">
+        <button class="btn btn-admin" onclick="sendData('broadcast')">Запустить рассылку</button>
+    </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
+        let tg = window.Telegram.WebApp;
         tg.expand();
 
-        let cart = {}; 
-        const SHEET_ID = '1crc2bmRKjYSbJbu4F8W_rvHxVnxt1x-T_hgI5m2uOOI';
-        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+        // Данные пользователя
+        document.getElementById('u-name').innerText = tg.initDataUnsafe.user?.first_name || "Гость";
+        document.getElementById('u-id').innerText = tg.initDataUnsafe.user?.id || "Неизвестно";
 
-        fetch(URL).then(r => r.text()).then(data => {
-            const rows = data.split('\n').filter(r => r.trim() !== '').slice(1);
-            let html = '';
-            rows.forEach((row, index) => {
-                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (cols.length >= 2) {
-                    const n = cols[0].replace(/"/g, '').trim();
-                    const p = cols[1].replace(/"/g, '').trim();
-                    html += `
-                    <div class="card">
-                        <div class="price-info">
-                            <span class="item-name">${n}</span>
-                            <span class="current-price">${p} ⭐</span>
-                        </div>
-                        <div class="controls">
-                            <button class="btn-qty" onclick="changeQty('${n}', ${p}, -1)">-</button>
-                            <span class="count" id="count-${n}">0</span>
-                            <button class="btn-qty" onclick="changeQty('${n}', ${p}, 1)">+</button>
-                        </div>
-                    </div>`;
-                }
-            });
-            document.getElementById('catalog').innerHTML = html;
-        });
-
-        function changeQty(name, price, delta) {
-            if (!cart[name]) cart[name] = { price: price, qty: 0 };
-            cart[name].qty += delta;
-            if (cart[name].qty < 0) cart[name].qty = 0;
-            
-            document.getElementById(`count-${name}`).innerText = cart[name].qty;
-            updateCartBtn();
+        // Проверка на админа (ЗАМЕНИТЬ НА ВАШ ID)
+        const MY_ADMIN_ID = 123456789; 
+        if (tg.initDataUnsafe.user?.id === MY_ADMIN_ID) {
+            document.getElementById('admin-btn').classList.remove('hidden');
         }
 
-        function updateCartBtn() {
-            let total = 0;
-            for (let id in cart) total += cart[id].price * cart[id].qty;
-            
-            const btn = document.getElementById('cart-btn');
-            if (total > 0) {
-                btn.style.display = 'block';
-                btn.innerText = `ОПЛАТИТЬ: ${total} ⭐`;
-            } else {
-                btn.style.display = 'none';
-            }
+        function show(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        function sendOrder() {
-            let finalItems = [];
-            let total = 0;
-            for (let name in cart) {
-                if (cart[name].qty > 0) {
-                    finalItems.push(`${name} (x${cart[name].qty})`);
-                    total += cart[name].price * cart[name].qty;
-                }
+        function sendData(type) {
+            let payload = { type: type };
+            if (type === 'apply') {
+                payload.nick = document.getElementById('nick').value;
+                payload.reason = document.getElementById('reason').value;
+                if(!payload.nick || !payload.reason) return alert("Заполните все поля!");
+            } else if (type === 'edit_news') {
+                payload.text = document.getElementById('adm-news').value;
+            } else if (type === 'broadcast') {
+                payload.text = document.getElementById('adm-bc').value;
             }
-            // ОТПРАВКА ДАННЫХ БОТУ
-            tg.sendData(JSON.stringify({
-                items: finalItems.join(", "),
-                total: total
-            }));
+            tg.sendData(JSON.stringify(payload));
             tg.close();
         }
     </script>
